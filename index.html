@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css" />
+  <meta charset="UTF-8" />
+  <title>Bate-papo</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.socket.io/4.0.1/socket.io.js"></script>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <style>
+    /* Estilo para os cards */
+    .message-card {
+      margin: 10px;
+      padding: 10px;
+    }
+
+    /* Estilo para as mensagens antigas */
+    .old-messages {
+      height: 220px;
+      overflow-y: auto;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="navigation">
+    <nav>
+      <div class="nav-wrapper">
+        <button onclick="redirectToIndex()" class="btn btn-default">&lt;</button>
+        <span class="brand-logo center">Bate-papo</span>
+        <button onclick="redirectToIndex()" class="btn btn-default">&gt;</button>
+      </div>
+    </nav>
+  </div>
+
+  <div class="container">
+    <!-- Card para mensagens antigas -->
+    <div class="card">
+      <div class="card-content">
+        <div class="message-card old-messages">
+          <ul id="messages"></ul>
+        </div>
+      </div>
+    </div>
+    <!-- Card para a mensagem atualmente digitada -->
+    <div class="card">
+      <div class="card-content">
+        <div class="message-card">
+          <form id="chat-form">
+            <input id="message" autocomplete="off" /><button>Enviar</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    $(document).ready(function () {
+      var socket = io();
+
+      // Função para adicionar uma mensagem ao card de mensagens antigas
+      function addOldMessage(msg) {
+        var messages = $("#messages")
+          .find("li")
+          .map(function () {
+            return $(this).text();
+          })
+          .get();
+
+        if (!messages.includes(msg)) {
+          $("#messages").append($("<li>").text(msg));
+        }
+      }
+
+      // Função para adicionar a mensagem atual ao card de mensagem atual
+      function addCurrentMessage(msg) {
+        $("#messages").append($("<li>").text(msg));
+      }
+
+      $("#chat-form").submit(function () {
+        var message = $("#message").val();
+        socket.emit("chat message", message);
+        addCurrentMessage(message); // Adicione a mensagem atual ao card
+        $("#message").val("");
+        return false;
+      });
+
+      socket.on("chat message", function (msg) {
+        addOldMessage(msg); // Adicione a mensagem às mensagens antigas
+      });
+    });
+  </script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+
+  <script>
+    // Redirecionar para outras páginas
+    function redirectToIndex() {
+      window.location.href = "index.html";
+    }
+  </script>
+</body>
+
+</html>
