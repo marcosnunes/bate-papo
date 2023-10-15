@@ -2,105 +2,128 @@
 <html>
 
 <head>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css" />
-  <meta charset="UTF-8" />
-  <title>Bate-papo</title>
-  <link rel="stylesheet" href="style.css" />
-  <script src="https://cdn.socket.io/4.0.1/socket.io.js"></script>
-  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-  <style>
-    /* Estilo para os cards */
-    .message-card {
-      margin: 10px;
-      padding: 10px;
-    }
-
-    /* Estilo para as mensagens antigas */
-    .old-messages {
-      height: 220px;
-      overflow-y: auto;
-    }
-  </style>
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css" />
+	<meta charset="UTF-8" />
+	<title>Bate-papo</title>
+	<link rel="stylesheet" type="text/css" href="css/style.css" />
 </head>
 
 <body>
-  <div class="navigation">
-    <nav>
-      <div class="nav-wrapper">
-        <button onclick="redirectToIndex()" class="btn btn-default">&lt;</button>
-        <span class="brand-logo center">Bate-papo</span>
-        <button onclick="redirectToIndex()" class="btn btn-default">&gt;</button>
-      </div>
-    </nav>
-  </div>
+	<div class="navigation">
+		<nav>
+			<div class="nav-wrapper">
+				<button onclick="redirectToIndex()" class="btn btn-default">
+					&lt;
+				</button>
+				<span class="brand-logo center">Bate-papo</span>
+				<button onclick="redirectToIndex()" class="btn btn-default">
+					&gt;
+				</button>
+			</div>
+		</nav>
+	</div>
+	<div class="container">
+		<!-- Div com o formulário de acesso, para inserir o apelido -->
+		<div class="card">
+			<div class="card-content">
+				<div id="acesso_usuario">
+					<form id="login">
+						<input type="text" placeholder="Insira seu apelido" name="apelido" id="apelido" />
+						<input type="submit" value="Entrar" />
+					</form>
+				</div>
+			</div>
+		</div>
+		<!-- Div principal onde fica o painel de mensagens e lista de usuários -->
+		<div class="card">
+			<div class="card-content">
+				<div id="sala_chat">
+					<div id="historico_mensagens"></div>
+					<select multiple="multiple" id="lista_usuarios">
+						<option value="">Todos</option>
+					</select>
+					<form id="chat">
+						<input type="text" id="texto_mensagem" name="texto_mensagem" />
+						<input type="submit" value="Enviar mensagem!" />
+					</form>
+				</div>
+			</div>
+		</div>
+	</div>
+	<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
+	<script type="text/javascript" src="/socket.io/socket.io.js"></script>
+	<script type="text/javascript">
+		var socket = io.connect();
 
-  <div class="container">
-    <!-- Card para mensagens antigas -->
-    <div class="card">
-      <div class="card-content">
-        <div class="message-card old-messages">
-          <ul id="messages"></ul>
-        </div>
-      </div>
-    </div>
-    <!-- Card para a mensagem atualmente digitada -->
-    <div class="card">
-      <div class="card-content">
-        <div class="message-card">
-          <form id="chat-form">
-            <input id="message" autocomplete="off" /><button>Enviar</button>
-          </form>
-        </div>
-      </div>
-    </div>
-  </div>
-  <script>
-    $(document).ready(function () {
-      var socket = io('https://bate-papo-27thggn4f-marcosnunes-projects.vercel.app/');
+		// Ao enviar uma mensagem
+		$("form#chat").submit(function (e) {
+			e.preventDefault();
 
-      // Função para adicionar uma mensagem ao card de mensagens antigas
-      function addOldMessage(msg) {
-        var messages = $("#messages")
-          .find("li")
-          .map(function () {
-            return $(this).text();
-          })
-          .get();
+			var mensagem = $(this).find("#texto_mensagem").val();
+			var usuario = $("#lista_usuarios").val(); // Usuário selecionado na lista lateral direita
 
-        if (!messages.includes(msg)) {
-          $("#messages").append($("<li>").text(msg));
-        }
-      }
+			// Evento acionado no servidor para o envio da mensagem
+			// junto com o nome do usuário selecionado da lista
+			socket.emit(
+				"enviar mensagem",
+				{ msg: mensagem, usu: usuario },
+				function () {
+					$("form#chat #texto_mensagem").val("");
+				}
+			);
+		});
 
-      // Função para adicionar a mensagem atual ao card de mensagem atual
-      function addCurrentMessage(msg) {
-        $("#messages").append($("<li>").text(msg));
-      }
+		// Resposta ao envio de mensagens do servidor
+		socket.on("atualizar mensagens", function (dados) {
+			var mensagem_formatada = $("<p />")
+				.text(dados.msg)
+				.addClass(dados.tipo);
+			$("#historico_mensagens").append(mensagem_formatada);
+		});
 
-      $("#chat-form").submit(function () {
-        var message = $("#message").val();
-        socket.emit("chat message", message);
-        addCurrentMessage(message); // Adicione a mensagem atual ao card
-        $("#message").val("");
-        return false;
-      });
+		$("form#login").submit(function (e) {
+			e.preventDefault();
 
-      socket.on("chat message", function (msg) {
-        addOldMessage(msg); // Adicione a mensagem às mensagens antigas
-      });
-    });
-  </script>
+			// Evento enviado quando o usuário insere um apelido
+			socket.emit(
+				"entrar",
+				$(this).find("#apelido").val(),
+				function (valido) {
+					if (valido) {
+						// Caso não exista nenhum usuário com o mesmo nome, o painel principal é exibido
+						$("#acesso_usuario").hide();
+						$("#sala_chat").show();
+					} else {
+						// Do contrário o campo de mensagens é limpo e é apresentado um alert
+						$("#acesso_usuario").val("");
+						alert("Nome já utilizado nesta sala");
+					}
+				}
+			);
+		});
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+		// Quando servidor enviar uma nova lista de usuários
+		// o select é limpo e reinserida a opção Todos
+		// junto de toda a lista de usuários.
+		socket.on("atualizar usuarios", function (usuarios) {
+			$("#lista_usuarios").empty();
+			$("#lista_usuarios").append("<option value=''>Todos</option>");
+			$.each(usuarios, function (indice) {
+				var opcao_usuario = $("<option />").text(usuarios[indice]);
+				$("#lista_usuarios").append(opcao_usuario);
+			});
+		});
+	</script>
+	<script>
+		// Redirecionar para outras páginas
+		function redirectToIndex() {
+			window.location.href = "https://marcosnunes.github.io/autossuficiencia";
+		}
+	</script>
 
-  <script>
-    // Redirecionar para outras páginas
-    function redirectToIndex() {
-      window.location.href = "https://marcosnunes.github.io/autossuficiencia";
-    }
-  </script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
 </body>
 
 </html>
